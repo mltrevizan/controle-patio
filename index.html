@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Pátio - 8ª SDP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { police: { 800: '#1e293b', 900: '#0f172a', gold: '#d97706' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sheet-table th, .sheet-table td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+        .sheet-table th { background-color: #f8fafc; font-weight: 600; color: #334155; position: sticky; top: 0; z-index: 10; }
+        .sheet-table tr:nth-child(even) { background-color: #f8fafc; }
+        .sheet-table tr:hover { background-color: #f1f5f9; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .top-scrollbar-wrapper { overflow-x: auto; overflow-y: hidden; }
+        .top-scrollbar-dummy { height: 1px; }
+
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background: white !important; color: black !important; font-size: 10pt; }
+            .no-print, header, #kpiContainer, .filter-bar, .modal, #toastContainer, td button { display: none !important; }
+            #printArea { display: block !important; width: 100% !important; }
+            table.print-table { width: 100%; border-collapse: collapse; }
+            table.print-table th, table.print-table td { border: 1px solid #666 !important; padding: 4px 6px !important; font-size: 8pt !important; word-wrap: break-word; white-space: normal !important; }
+            table.print-table th { background-color: #eee !important; color: #000 !important; }
+        }
+    </style>
+
+    <!-- FIREBASE SDK MODULAR -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        // CONFIGURAÇÃO DO SEU FIREBASE PROJECT
+        const firebaseConfig = {
+            apiKey: "AIzaSyDRhJRpjiZEr7aRpyUx3LQz777WdoAvr_g",
+            authDomain: "controle-8.firebaseapp.com",
+            databaseURL: "https://controle-8-default-rtdb.firebaseio.com",
+            projectId: "controle-8",
+            storageBucket: "controle-8.firebasestorage.app",
+            messagingSenderId: "947700116966",
+            appId: "1:947700116966:web:611a81cdb2a16e3d1d3a27"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Expondo para o escopo global da janela
+        window.fbDB = db;
+        window.fbRef = ref;
+        window.fbSet = set;
+        window.fbUpdate = update;
+        window.fbRemove = remove;
+        window.fbOnValue = onValue;
+    </script>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-slate-700 selection:text-white" onclick="handleGlobalClick(event)">
+
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+            <div class="p-6 bg-slate-900 text-white text-center border-b border-slate-800 space-y-2 flex flex-col items-center">
+                <div class="p-2 bg-slate-800 rounded-xl border border-slate-700 mb-1 flex items-center justify-center">
+                    <img id="loginLogoImg" src="" alt="Brasão PCPR" class="h-20 w-auto object-contain">
+                </div>
+                <h2 class="font-bold text-xl tracking-wide">Controle de Pátio - 8ª SDP</h2>
+                <p class="text-xs text-slate-400">Informe suas credenciais para acessar o sistema</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Usuário / Login</label>
+                    <input type="text" id="loginUsername" required placeholder="Ex: admin" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Senha</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-lg transition shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Entrar no Sistema</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Primeiro Acesso -->
+    <div id="firstAccessModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-amber-300 w-full max-w-md overflow-hidden">
+            <div class="p-5 bg-amber-600 text-white flex items-center gap-3">
+                <i class="fa-solid fa-key text-2xl"></i>
+                <div>
+                    <h3 class="font-bold text-base">Primeiro Acesso Detectado</h3>
+                    <p class="text-xs text-amber-100">Por razões de segurança, altere sua senha temporária.</p>
+                </div>
+            </div>
+            <form onsubmit="handleFirstPasswordChange(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nova Senha</label>
+                    <input type="password" id="firstNewPassword" required minlength="4" placeholder="Digite a nova senha" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Confirme a Nova Senha</label>
+                    <input type="password" id="firstConfirmPassword" required minlength="4" placeholder="Repita a nova senha" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-lg transition shadow-md">
+                    Atualizar Senha & Acessar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header Principal -->
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-700 sticky top-0 z-20 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-slate-800 p-1 rounded-lg border border-slate-700 flex items-center justify-center">
+                        <img id="headerLogoImg" src="" alt="Brasão PCPR" class="h-10 w-auto object-contain">
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide">Controle de Pátio - 8ª SDP</h1>
+                        <p class="text-xs text-slate-400">Controle de Veículos Apreendidos e Custodiados</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div class="flex items-center bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1 text-xs gap-2">
+                        <i class="fa-solid fa-user text-amber-400"></i>
+                        <div class="text-left">
+                            <span id="headerUserName" class="font-bold text-slate-200 block truncate max-w-[110px]">Usuário</span>
+                            <span id="headerUserRole" class="text-[10px] text-slate-400 uppercase block leading-none">Perfil</span>
+                        </div>
+                    </div>
+
+                    <button id="btnManageUsers" onclick="openUsersModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium rounded-md border border-slate-700 transition flex items-center gap-1.5 hidden" title="Gerenciar Usuários">
+                        <i class="fa-solid fa-users-gear text-amber-400"></i>
+                        <span class="hidden md:inline">Usuários</span>
+                    </button>
+
+                    <button id="btnManageStatus" onclick="openStatusModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium rounded-md border border-slate-700 transition flex items-center gap-1.5" title="Gerenciar Status">
+                        <i class="fa-solid fa-tags text-amber-400"></i>
+                        <span class="hidden md:inline">Status</span>
+                    </button>
+                    
+                    <button id="btnImport" onclick="openImportModal()" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs sm:text-sm font-medium rounded-md transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-file-import"></i>
+                        <span>Importar</span>
+                    </button>
+                    
+                    <button id="btnAddVehicle" onclick="openVehicleModal()" class="px-3 py-2 bg-blue-700 hover:bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Novo</span>
+                    </button>
+
+                    <button onclick="logout()" class="p-2 bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 rounded-md border border-rose-800/50 transition" title="Sair do Sistema">
+                        <i class="fa-solid fa-power-off text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
+        <div id="kpiContainer" class="flex flex-wrap gap-2.5 no-print items-stretch"></div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between filter-bar no-print">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <div class="relative flex-1 min-w-[200px]">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </div>
+                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Buscar placa, modelo, BOU, PPJE, obs..." class="pl-9 pr-3 py-2 text-sm w-full bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none uppercase">
+                </div>
+
+                <div class="relative w-full sm:w-64" id="statusDropdownContainer">
+                    <button type="button" onclick="toggleStatusDropdown(event)" class="w-full py-2 px-3 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none font-medium text-slate-700 flex items-center justify-between">
+                        <span id="statusDropdownLabel" class="truncate">-- Todos os Status --</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                    </button>
+
+                    <div id="statusDropdownMenu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-30 p-2 max-h-60 overflow-y-auto space-y-1">
+                        <div class="flex justify-between items-center px-1 pb-1 mb-1 border-b border-slate-100 text-[11px]">
+                            <button type="button" onclick="toggleAllFilterStatuses(true)" class="text-blue-600 hover:underline font-semibold">Marcar Todos</button>
+                            <button type="button" onclick="toggleAllFilterStatuses(false)" class="text-slate-500 hover:underline">Desmarcar Todos</button>
+                        </div>
+                        <div id="statusFilterCheckboxes" class="space-y-1"></div>
+                    </div>
+                </div>
+
+                <button onclick="clearFilters()" class="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg hover:bg-slate-100 transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <span>Limpar</span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 self-end md:self-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
+                <button onclick="openPrintModal()" class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-print text-slate-600"></i>
+                    <span>Imprimir / PDF</span>
+                </button>
+                <button id="btnExport" onclick="openExportModal()" class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-csv text-slate-600"></i>
+                    <span>Exportar CSV</span>
+                </button>
+                <button id="btnClearAll" onclick="clearAllVehicles()" class="px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span class="hidden sm:inline">Limpar Tudo</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden min-h-[400px] no-print">
+            <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-medium">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells"></i>
+                    <span>Exibindo <strong id="recordCount" class="text-slate-900">0</strong> registros</span>
+                </div>
+                <div class="text-slate-400 text-[11px]">
+                    <i class="fa-solid fa-arrows-left-right me-1"></i> Deslize pelas barras de rolagem
+                </div>
+            </div>
+
+            <div id="topScrollbarWrapper" class="top-scrollbar-wrapper border-b border-slate-200 bg-slate-50/50">
+                <div id="topScrollbarDummy" class="top-scrollbar-dummy"></div>
+            </div>
+
+            <div id="mainTableWrapper" class="flex-1 overflow-auto relative">
+                <table id="mainTable" class="w-full text-left sheet-table border-collapse">
+                    <thead>
+                        <tr class="select-none">
+                            <th class="w-20 text-center bg-slate-100 sticky left-0 z-20 border-r border-slate-300">Ações</th>
+                            <th>Fotos</th>
+                            <th onclick="sortTableBy('status')" class="cursor-pointer hover:bg-slate-200 transition">Status <span id="sort_icon_status" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('placa')" class="cursor-pointer hover:bg-slate-200 transition">Placa <span id="sort_icon_placa" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('modelo')" class="cursor-pointer hover:bg-slate-200 transition">Modelo <span id="sort_icon_modelo" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('cor')" class="cursor-pointer hover:bg-slate-200 transition">Cor <span id="sort_icon_cor" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('tipo')" class="cursor-pointer hover:bg-slate-200 transition">Tipo <span id="sort_icon_tipo" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('localDisplay')" class="cursor-pointer hover:bg-slate-200 transition">Local <span id="sort_icon_localDisplay" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('delegacia')" class="cursor-pointer hover:bg-slate-200 transition">Delegacia Vinc. <span id="sort_icon_delegacia" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('dataApreensao')" class="cursor-pointer hover:bg-slate-200 transition">Data Apreensão <span id="sort_icon_dataApreensao" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('bouApreensao')" class="cursor-pointer hover:bg-slate-200 transition">BOU Apreensão <span id="sort_icon_bouApreensao" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('bouRecuperacao')" class="cursor-pointer hover:bg-slate-200 transition">BOU Recuperação <span id="sort_icon_bouRecuperacao" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('tipoProcedimento')" class="cursor-pointer hover:bg-slate-200 transition">Tipo Procedimento <span id="sort_icon_tipoProcedimento" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('ppje')" class="cursor-pointer hover:bg-slate-200 transition">Nº PPJE <span id="sort_icon_ppje" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('projudi')" class="cursor-pointer hover:bg-slate-200 transition">Nº PROJUDI <span id="sort_icon_projudi" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('varaComarca')" class="cursor-pointer hover:bg-slate-200 transition">Vara/Comarca <span id="sort_icon_varaComarca" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('pericia')" class="cursor-pointer hover:bg-slate-200 transition">Perícia Realizada? <span id="sort_icon_pericia" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('laudo')" class="cursor-pointer hover:bg-slate-200 transition">Laudo Pericial <span id="sort_icon_laudo" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('cautelarPpje')" class="cursor-pointer hover:bg-slate-200 transition">Cautelar PPJ-E <span id="sort_icon_cautelarPpje" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('cautelarProjudi')" class="cursor-pointer hover:bg-slate-200 transition">Cautelar PROJUDI <span id="sort_icon_cautelarProjudi" class="text-[10px] text-slate-400">↕</span></th>
+                            <th onclick="sortTableBy('observacoes')" class="cursor-pointer hover:bg-slate-200 transition">Observações <span id="sort_icon_observacoes" class="text-[10px] text-slate-400">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicleTableBody" class="divide-y divide-slate-200"></tbody>
+                </table>
+                <div id="emptyState" class="hidden py-16 flex flex-col items-center justify-center text-center text-slate-400">
+                    <i class="fa-solid fa-car-tunnel text-5xl mb-3 text-slate-300"></i>
+                    <p class="text-base font-medium text-slate-600">Nenhum veículo encontrado</p>
+                    <p class="text-xs mt-1 text-slate-400">Ajuste os filtros de busca ou importe/cadastre novos registros.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Gerenciamento de Usuários -->
+    <div id="usersModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-amber-400"></i>
+                    <span>Gerenciar Usuários e Permissões</span>
+                </h3>
+                <button onclick="closeUsersModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <form id="userForm" onsubmit="saveUser(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <h4 id="userFormTitle" class="text-xs font-bold uppercase text-slate-700">Cadastrar Novo Usuário</h4>
+                    <input type="hidden" id="userEditId">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">NOME COMPLETO *</label>
+                            <input type="text" id="field_userName" required placeholder="Ex: João Silva" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">USUÁRIO / LOGIN *</label>
+                            <input type="text" id="field_userLogin" required placeholder="Ex: jsilva" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">PERFIL *</label>
+                            <select id="field_userRole" required class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-slate-800 bg-white">
+                                <option value="viewer">Visualizador (Somente Leitura)</option>
+                                <option value="operator">Operador (Edição e Inclusão)</option>
+                                <option value="admin">Administrador (Acesso Total)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">SENHA INICIAL *</label>
+                            <input type="password" id="field_userPass" placeholder="Senha do usuário" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-slate-800">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button type="button" onclick="resetUserForm()" class="px-3 py-1.5 text-xs text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition">Cancelar</button>
+                        <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition">Salvar Usuário</button>
+                    </div>
+                </form>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-700 mb-2">Usuários Cadastrados</h4>
+                    <div class="border border-slate-200 rounded-lg overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 border-b border-slate-200 font-semibold text-slate-700">
+                                <tr>
+                                    <th class="p-2">Nome</th>
+                                    <th class="p-2">Login</th>
+                                    <th class="p-2">Perfil</th>
+                                    <th class="p-2 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Printable Area for @media print -->
+    <div id="printArea" class="hidden">
+        <div class="mb-4 text-center border-b pb-2">
+            <h2 class="text-xl font-bold uppercase">Controle de Pátio - 8ª SDP - Relatório de Veículos</h2>
+            <p class="text-xs text-gray-600">Gerado em: <span id="printDate"></span> | Delegacia de Polícia</p>
+        </div>
+        <table class="print-table">
+            <thead id="printTableHead"></thead>
+            <tbody id="printTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Modal Pop-up Alerta de Duplicidade de Veículo -->
+    <div id="duplicateModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-amber-300 w-full max-w-md overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-amber-600 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Veículo Repetido Encontrado</span>
+                </h3>
+                <button onclick="closeDuplicateModal()" class="text-amber-100 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-3">
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    A placa <strong id="dupPlateText" class="font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">ABC-1234</strong> já consta cadastrada no sistema:
+                </p>
+                <div id="dupVehicleInfo" class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1 font-sans"></div>
+                <p class="text-xs text-slate-500">Deseja descartar este registro ou ignorar e salvar a entrada repetida assim mesmo?</p>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeDuplicateModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Descartar / Cancelar</button>
+                <button onclick="confirmSaveDuplicate()" class="px-4 py-2 text-xs font-medium text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Ignorar & Salvar Repetido</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pop-up Alerta de Requisitos de Status -->
+    <div id="statusRuleModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-rose-200 w-full max-w-md overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-rose-700 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>Atenção - Regras de Status</span>
+                </h3>
+                <button onclick="closeStatusRuleModal()" class="text-rose-100 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-3">
+                <p id="statusRuleMessage" class="text-xs sm:text-sm text-slate-700 leading-relaxed"></p>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeStatusRuleModal()" class="px-4 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar / Editar Veículo -->
+    <div id="vehicleModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <h3 id="modalVehicleTitle" class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-car"></i>
+                    <span>Cadastrar Novo Veículo</span>
+                </h3>
+                <button onclick="closeVehicleModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="vehicleForm" onsubmit="saveVehicle(event)" class="p-6 overflow-y-auto flex-1 space-y-6">
+                <input type="hidden" id="vehicleId">
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 border-b border-slate-200 pb-1">1. Identificação Básica</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">PLACA APLICADA *</label>
+                            <input type="text" id="field_placa" required placeholder="ABC-1D23" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">MODELO *</label>
+                            <input type="text" id="field_modelo" required placeholder="Ex: VW Gol 1.6" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">COR</label>
+                            <input type="text" id="field_cor" placeholder="Ex: Prata" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">TIPO</label>
+                            <input type="text" id="field_tipo" placeholder="Automóvel, Moto, Carga..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 border-b border-slate-200 pb-1">2. Pátio & Situação</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">STATUS *</label>
+                            <select id="field_status" required class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none bg-white font-medium uppercase"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">LOCAL *</label>
+                            <div class="flex gap-2">
+                                <select id="field_localBase" required class="w-1/3 px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none bg-white font-medium uppercase">
+                                    <option value="PÁTIO">PÁTIO</option>
+                                    <option value="BARRACÃO">BARRACÃO</option>
+                                </select>
+                                <input type="text" id="field_localSub" placeholder="Especificação (Ex: Vaga 12)" class="w-2/3 px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">DELEGACIA VINCULADA</label>
+                            <input type="text" id="field_delegacia" placeholder="Ex: 8ª SDP Foz do Iguaçu" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 border-b border-slate-200 pb-1">3. Dados da Apreensão</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">DATA DA APREENSÃO</label>
+                            <input type="date" id="field_dataApreensao" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">BOU APREENSÃO</label>
+                            <input type="text" id="field_bouApreensao" placeholder="2024/XXXXXX" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">BOU RECUPERAÇÃO</label>
+                            <input type="text" id="field_bouRecuperacao" placeholder="2024/XXXXXX" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 border-b border-slate-200 pb-1">4. Procedimento Jurídico e Perícia</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">TIPO DE PROCEDIMENTO</label>
+                            <input type="text" id="field_tipoProcedimento" placeholder="Inquérito, APFD, TC..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nº PPJE</label>
+                            <input type="text" id="field_ppje" placeholder="0000000-00.2024..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nº PROJUDI</label>
+                            <input type="text" id="field_projudi" placeholder="0000000-00.2024..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">VARA / COMARCA</label>
+                            <input type="text" id="field_varaComarca" placeholder="Ex: 1ª Vara Criminal" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">FOI REALIZADA PERÍCIA?</label>
+                            <select id="field_pericia" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none bg-white uppercase">
+                                <option value="Não">Não</option>
+                                <option value="Sim">Sim</option>
+                                <option value="Pendente">Pendente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nº LAUDO PERICIAL</label>
+                            <input type="text" id="field_laudo" placeholder="Laudo nº..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">CAUTELAR PPJ-E</label>
+                            <input type="text" id="field_cautelarPpje" placeholder="Nº Cautelar" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">CAUTELAR PROJUDI</label>
+                            <input type="text" id="field_cautelarProjudi" placeholder="Nº Cautelar" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 border-b border-slate-200 pb-1">5. Fotos do Veículo</h4>
+                    <div>
+                        <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageUpload(event)" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 mb-3">
+                        <div id="imagePreviewContainer" class="flex flex-wrap gap-3"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">OBSERVAÇÕES</label>
+                    <textarea id="field_observacoes" rows="3" placeholder="Avarias, pertences internos, chaves na recepção, observações adicionais..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none resize-y"></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeVehicleModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 transition">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 text-xs sm:text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 rounded-lg transition shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Salvar Veículo</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Histórico de Alterações -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-400"></i>
+                    <span>Histórico do Veículo (<span id="historyPlate">-</span>)</span>
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto" id="historyTimeline"></div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeHistoryModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gerenciar Status -->
+    <div id="statusModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-amber-400"></i>
+                    <span>Gerenciar Opções de STATUS e Habilitação de Soma</span>
+                </h3>
+                <button onclick="closeStatusModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <form id="addStatusForm" onsubmit="addCustomStatus(event)" class="flex gap-2">
+                    <input type="text" id="newStatusInput" required placeholder="Nome do novo status..." class="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none uppercase">
+                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs rounded-lg transition flex items-center gap-1">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Adicionar</span>
+                    </button>
+                </form>
+
+                <p class="text-xs text-slate-500">Abaixo você pode habilitar ou desativar a participação de cada STATUS na contagem dos cards totalizadores.</p>
+                <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-64 overflow-y-auto" id="statusListContainer"></div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeStatusModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Importar CSV / Planilha -->
+    <div id="importModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-emerald-800 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-file-csv"></i>
+                    <span>Importar Arquivo CSV / Google Sheets</span>
+                </h3>
+                <button onclick="closeImportModal()" class="text-emerald-200 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <div class="flex border-b border-slate-200 gap-4 text-sm font-medium">
+                    <button id="tabBtnPaste" onclick="switchImportTab('paste')" class="pb-2 border-b-2 border-emerald-600 text-emerald-700 font-semibold">Arquivo CSV / Copiar & Colar</button>
+                    <button id="tabBtnLink" onclick="switchImportTab('link')" class="pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Link Direto Google Sheets</button>
+                </div>
+
+                <div id="importTabPaste" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Selecione um ou mais Arquivos .CSV</label>
+                        <input type="file" id="csvFileInput" accept=".csv, .tsv, .txt" multiple onchange="handleFileUpload(event)" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                    </div>
+
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-slate-200"></div>
+                        <span class="flex-shrink mx-2 text-[10px] text-slate-400 font-semibold uppercase">ou cole o conteúdo do CSV</span>
+                        <div class="flex-grow border-t border-slate-200"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Cole o texto do CSV ou células copias da planilha</label>
+                        <textarea id="csvPasteInput" rows="5" placeholder="LOCAL, DELEGACIA VINCULADA, TIPO, PLACA APLICADA, STATUS..." class="w-full p-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 outline-none resize-none"></textarea>
+                    </div>
+
+                    <button onclick="importFromText()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-import"></i>
+                        <span>Processar e Importar CSV</span>
+                    </button>
+                </div>
+
+                <div id="importTabLink" class="space-y-3 hidden">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-900 space-y-1">
+                        <p class="font-bold"><i class="fa-solid fa-circle-info me-1"></i> Como publicar no Google Sheets:</p>
+                        <ol class="list-decimal pl-4 space-y-0.5 text-emerald-800">
+                            <li>Acesse: <strong>Arquivo &gt; Compartilhar &gt; Publicar na Web</strong>.</li>
+                            <li>Altere o formato de "Página da Web" para <strong>Valores separados por vírgula (.csv)</strong>.</li>
+                            <li>Clique em <strong>Publicar</strong> e cole a URL abaixo.</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">URL da Planilha Publicada (CSV)</label>
+                        <input type="url" id="sheetsUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+
+                    <button onclick="importFromUrl()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Carregar Planilha Online</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Exportar CSV com Filtro de Status -->
+    <div id="exportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-file-csv text-slate-300"></i>
+                    <span>Exportar Arquivo CSV</span>
+                </h3>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-600 font-medium">Selecione os STATUS que deseja incluir no arquivo CSV exportado:</p>
+                <div class="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
+                    <button type="button" onclick="toggleExportAllStatuses(true)" class="text-blue-600 hover:underline font-semibold">Marcar Todos</button>
+                    <button type="button" onclick="toggleExportAllStatuses(false)" class="text-slate-500 hover:underline">Desmarcar Todos</button>
+                </div>
+                <div id="exportStatusList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Cancelar</button>
+                <button onclick="executeExportCSV()" class="px-4 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Baixar CSV</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configuração de Impressão -->
+    <div id="printModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-print text-slate-300"></i>
+                    <span>Configurar Impressão / PDF</span>
+                </h3>
+                <button onclick="closePrintModal()" class="text-slate-400 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">1. Registros para imprimir:</label>
+                    <div class="flex gap-4 text-xs font-medium">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="printScope" value="filtered" checked class="text-blue-600 focus:ring-blue-500">
+                            <span>Apenas os filtrados na tela (<strong id="printScopeCount">0</strong>)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="printScope" value="all" class="text-blue-600 focus:ring-blue-500">
+                            <span>Todos os veículos cadastrados</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase">2. Selecione as Colunas:</label>
+                        <div class="space-x-2 text-[11px]">
+                            <button type="button" onclick="togglePrintColumns(true)" class="text-blue-600 hover:underline font-medium">Todas</button>
+                            <button type="button" onclick="togglePrintColumns(false)" class="text-slate-500 hover:underline">Nenhuma</button>
+                        </div>
+                    </div>
+                    <div id="printColumnsContainer" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto border border-slate-200 p-3 rounded-lg text-xs"></div>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closePrintModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Cancelar</button>
+                <button onclick="triggerPrintProcess()" class="px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-600 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Imprimir / Salvar PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toasts -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+    <script>
+        const BRASAO_PCPR_BASE64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23d97706'><path d='M256 0L416 96V224C416 330 347.8 425.2 256 464C164.2 425.2 96 330 96 224V96L256 0Z'/></svg>";
+
+        const DEFAULT_USERS = [
+            { id: 'usr_admin', name: 'Administrador do Sistema', login: 'admin', pass: '1234', role: 'admin', isFirstAccess: false }
+        ];
+
+        const DEFAULT_STATUSES = [
+            'SEM DESTINAÇÃO', 'COM PEDIDO DE DESTINAÇÃO', 'PARA ENTREGA', 'PARA LEILÃO',
+            'PARA DESTRUIÇÃO', 'PARA O SENAD', 'OUTRAS UNIDADES', 'DEVOLVIDO',
+            'DESTRUÍDO', 'PEDIDO ADM', 'ADM DEVOLVIDO'
+        ];
+
+        const DEFAULT_STATUS_ENABLED = {
+            'SEM DESTINAÇÃO': true, 'COM PEDIDO DE DESTINAÇÃO': true, 'PARA ENTREGA': true,
+            'PARA LEILÃO': true, 'PARA DESTRUIÇÃO': true, 'PARA O SENAD': true,
+            'OUTRAS UNIDADES': true, 'DEVOLVIDO': false, 'DESTRUÍDO': false,
+            'PEDIDO ADM': true, 'ADM DEVOLVIDO': false
+        };
+
+        const ALL_FIELDS = [
+            { key: 'placa', label: 'Placa' }, { key: 'status', label: 'Status' }, { key: 'modelo', label: 'Modelo' },
+            { key: 'cor', label: 'Cor' }, { key: 'tipo', label: 'Tipo' }, { key: 'localDisplay', label: 'Local' },
+            { key: 'delegacia', label: 'Delegacia' }, { key: 'dataApreensao', label: 'Data Apreensão' },
+            { key: 'bouApreensao', label: 'BOU Apreensão' }, { key: 'bouRecuperacao', label: 'BOU Recuperação' },
+            { key: 'tipoProcedimento', label: 'Tipo Procedimento' }, { key: 'ppje', label: 'Nº PPJE' },
+            { key: 'projudi', label: 'Nº PROJUDI' }, { key: 'varaComarca', label: 'Vara/Comarca' },
+            { key: 'pericia', label: 'Perícia' }, { key: 'laudo', label: 'Laudo Pericial' },
+            { key: 'cautelarPpje', label: 'Cautelar PPJ-E' }, { key: 'cautelarProjudi', label: 'Cautelar PROJUDI' },
+            { key: 'observacoes', label: 'Observações' }
+        ];
+
+        const DEFAULT_PRINT_KEYS = ['placa', 'status', 'modelo', 'cor', 'tipo', 'localDisplay', 'bouApreensao', 'ppje'];
+
+        let users = [];
+        let currentUser = null; 
+        let vehicles = [];
+        let statusList = [];
+        let statusEnabledMap = {}; 
+        let selectedFilterStatuses = [];
+        let currentRole = 'viewer'; 
+        let currentVehicleImages = [];
+        let pendingSaveVehicleData = null;
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+
+        window.onload = function() {
+            loadLogos();
+            initFirebaseListeners();
+            setupScrollbarSync();
+        };
+
+        function loadLogos() {
+            const headerImg = document.getElementById('headerLogoImg');
+            const loginImg = document.getElementById('loginLogoImg');
+            const logoPath = "LOGO1.jpg";
+            if (headerImg) { headerImg.src = logoPath; headerImg.onerror = function() { this.src = BRASAO_PCPR_BASE64; }; }
+            if (loginImg) { loginImg.src = logoPath; loginImg.onerror = function() { this.src = BRASAO_PCPR_BASE64; }; }
+        }
+
+        // --- INTEGRAÇÃO REALTIME DATABASE ---
+        function initFirebaseListeners() {
+            // Monitorar Veículos
+            window.fbOnValue(window.fbRef(window.fbDB, 'veiculos'), (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    vehicles = Object.keys(data).map(key => ({
+                        id: key,
+                        ...data[key],
+                        localDisplay: formatLocalDisplay(data[key].localBase, data[key].localSub)
+                    }));
+                } else {
+                    vehicles = [];
+                }
+                renderTable();
+                renderKpis();
+            });
+
+            // Monitorar Status
+            window.fbOnValue(window.fbRef(window.fbDB, 'statusList'), (snapshot) => {
+                const data = snapshot.val();
+                statusList = data ? Object.values(data) : [...DEFAULT_STATUSES];
+                renderStatusOptions();
+                renderKpis();
+            });
+
+            // Monitorar Soma de Status
+            window.fbOnValue(window.fbRef(window.fbDB, 'statusEnabledMap'), (snapshot) => {
+                const data = snapshot.val();
+                statusEnabledMap = data ? data : { ...DEFAULT_STATUS_ENABLED };
+                renderKpis();
+            });
+
+            // Monitorar Usuários
+            window.fbOnValue(window.fbRef(window.fbDB, 'usuarios'), (snapshot) => {
+                const data = snapshot.val();
+                users = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [...DEFAULT_USERS];
+                checkSessionLogin();
+            });
+        }
+
+        function saveVehiclesToStorage() {
+            // Mantida vazia. A persistência é enviada diretamente ao nó `veiculos/ID`
+        }
+
+        function saveStatusesToStorage() {
+            window.fbSet(window.fbRef(window.fbDB, 'statusList'), statusList);
+        }
+
+        function saveStatusTargetsToStorage() {
+            window.fbSet(window.fbRef(window.fbDB, 'statusEnabledMap'), statusEnabledMap);
+        }
+
+        function saveUsersToStorage() {
+            const usersObj = {};
+            users.forEach(u => { usersObj[u.id] = u; });
+            window.fbSet(window.fbRef(window.fbDB, 'usuarios'), usersObj);
+        }
+
+        function checkSessionLogin() {
+            const loggedUserId = localStorage.getItem('sicp_logged_user');
+            if (loggedUserId) {
+                const found = users.find(u => u.id === loggedUserId);
+                if (found) {
+                    currentUser = found;
+                    currentRole = found.role;
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    setupUserUI();
+                    return;
+                }
+            }
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const loginVal = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const passVal = document.getElementById('loginPassword').value.trim();
+            const found = users.find(u => normalizeText(u.login) === normalizeText(loginVal) && u.pass === passVal);
+
+            if (found) {
+                currentUser = found;
+                currentRole = found.role;
+                localStorage.setItem('sicp_logged_user', found.id);
+                document.getElementById('loginPassword').value = '';
+
+                if (found.isFirstAccess) {
+                    document.getElementById('firstAccessModal').classList.remove('hidden');
+                } else {
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    setupUserUI();
+                    showToast(`Bem-vindo, ${found.name}!`, 'success');
+                }
+            } else {
+                showToast('Usuário ou senha incorretos.', 'error');
+            }
+        }
+
+        function handleFirstPasswordChange(e) {
+            e.preventDefault();
+            const newP = document.getElementById('firstNewPassword').value.trim();
+            const confP = document.getElementById('firstConfirmPassword').value.trim();
+
+            if (newP !== confP) {
+                showToast('As senhas não coincidem!', 'error');
+                return;
+            }
+
+            if (currentUser) {
+                currentUser.pass = newP;
+                currentUser.isFirstAccess = false;
+                saveUsersToStorage();
+                document.getElementById('firstAccessModal').classList.add('hidden');
+                document.getElementById('loginScreen').classList.add('hidden');
+                setupUserUI();
+                showToast('Nova senha cadastrada com sucesso!', 'success');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            currentRole = 'viewer';
+            localStorage.removeItem('sicp_logged_user');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            showToast('Sessão encerrada.', 'info');
+        }
+
+        function setupUserUI() {
+            if (!currentUser) return;
+            document.getElementById('headerUserName').textContent = currentUser.name;
+            const roleLabels = { admin: 'Administrador', operator: 'Operador', viewer: 'Visualizador' };
+            document.getElementById('headerUserRole').textContent = roleLabels[currentUser.role] || currentUser.role;
+
+            applyRolePermissions();
+            renderStatusOptions();
+            renderTable();
+            renderKpis();
+        }
+
+        function applyRolePermissions() {
+            const btnClearAll = document.getElementById('btnClearAll');
+            const btnManageUsers = document.getElementById('btnManageUsers');
+            const btnManageStatus = document.getElementById('btnManageStatus');
+            const btnImport = document.getElementById('btnImport');
+            const btnAddVehicle = document.getElementById('btnAddVehicle');
+            const btnExport = document.getElementById('btnExport');
+
+            if (currentRole === 'viewer') {
+                if (btnClearAll) btnClearAll.style.display = 'none';
+                if (btnManageUsers) btnManageUsers.style.display = 'none';
+                if (btnManageStatus) btnManageStatus.style.display = 'none';
+                if (btnImport) btnImport.style.display = 'none';
+                if (btnAddVehicle) btnAddVehicle.style.display = 'none';
+                if (btnExport) btnExport.style.display = 'none';
+            } else if (currentRole === 'operator') {
+                if (btnClearAll) btnClearAll.style.display = 'none';
+                if (btnManageUsers) btnManageUsers.style.display = 'none';
+                if (btnManageStatus) btnManageStatus.style.display = 'flex';
+                if (btnImport) btnImport.style.display = 'flex';
+                if (btnAddVehicle) btnAddVehicle.style.display = 'flex';
+                if (btnExport) btnExport.style.display = 'flex';
+            } else if (currentRole === 'admin') {
+                if (btnClearAll) btnClearAll.style.display = 'flex';
+                if (btnManageUsers) btnManageUsers.style.display = 'flex';
+                if (btnManageStatus) btnManageStatus.style.display = 'flex';
+                if (btnImport) btnImport.style.display = 'flex';
+                if (btnAddVehicle) btnAddVehicle.style.display = 'flex';
+                if (btnExport) btnExport.style.display = 'flex';
+            }
+        }
+
+        // --- Gerenciamento de Usuários ---
+        function openUsersModal() { if (currentRole !== 'admin') return; renderUsersTable(); resetUserForm(); document.getElementById('usersModal').classList.remove('hidden'); }
+        function closeUsersModal() { document.getElementById('usersModal').classList.add('hidden'); }
+        function resetUserForm() { document.getElementById('userForm').reset(); document.getElementById('userEditId').value = ''; document.getElementById('userFormTitle').textContent = 'Cadastrar Novo Usuário'; document.getElementById('field_userPass').required = true; }
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            const roleLabels = { admin: 'Administrador', operator: 'Operador', viewer: 'Visualizador' };
+
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-medium text-slate-800">${escapeHtml(u.name)}</td>
+                    <td class="p-2 font-mono text-slate-600">${escapeHtml(u.login)}</td>
+                    <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : u.role === 'operator' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}">${roleLabels[u.role]}</span></td>
+                    <td class="p-2 text-center">
+                        <button onclick="editUser('${u.id}')" class="text-blue-600 hover:text-blue-800 p-1 rounded" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        ${u.login !== 'admin' ? `<button onclick="deleteUser('${u.id}')" class="text-rose-600 hover:text-rose-800 p-1 rounded" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editUser(userId) {
+            const u = users.find(usr => usr.id === userId);
+            if (!u) return;
+            document.getElementById('userEditId').value = u.id;
+            document.getElementById('field_userName').value = u.name;
+            document.getElementById('field_userLogin').value = u.login;
+            document.getElementById('field_userRole').value = u.role;
+            document.getElementById('field_userPass').value = '';
+            document.getElementById('field_userPass').required = false;
+            document.getElementById('userFormTitle').textContent = 'Editar Usuário (Deixe em branco para não alterar a senha)';
+        }
+
+        function saveUser(e) {
+            e.preventDefault();
+            if (currentRole !== 'admin') return;
+
+            const id = document.getElementById('userEditId').value;
+            const name = document.getElementById('field_userName').value.trim();
+            const login = document.getElementById('field_userLogin').value.trim().toLowerCase();
+            const role = document.getElementById('field_userRole').value;
+            const pass = document.getElementById('field_userPass').value.trim();
+
+            if (users.some(u => normalizeText(u.login) === normalizeText(login) && u.id !== id)) {
+                showToast('Este login de usuário já existe!', 'error');
+                return;
+            }
+
+            const targetId = id ? id : 'usr_' + Date.now();
+            const existingUser = users.find(u => u.id === targetId);
+            
+            const userData = {
+                id: targetId,
+                name: name,
+                login: login,
+                role: role,
+                pass: pass ? pass : (existingUser ? existingUser.pass : ''),
+                isFirstAccess: pass ? true : (existingUser ? existingUser.isFirstAccess : false)
+            };
+
+            window.fbSet(window.fbRef(window.fbDB, 'usuarios/' + targetId), userData)
+                .then(() => {
+                    showToast('Usuário salvo no Firebase!', 'success');
+                    resetUserForm();
+                });
+        }
+
+        function deleteUser(userId) {
+            if (currentRole !== 'admin') return;
+            const u = users.find(usr => usr.id === userId);
+            if (!u) return;
+
+            if (u.login === 'admin') {
+                showToast('Não é possível excluir o administrador principal.', 'error');
+                return;
+            }
+
+            if (confirm(`Remover o usuário ${u.name} (${u.login})?`)) {
+                window.fbRemove(window.fbRef(window.fbDB, 'usuarios/' + userId))
+                    .then(() => showToast('Usuário removido.', 'info'));
+            }
+        }
+
+        function setupScrollbarSync() {
+            const topWrapper = document.getElementById('topScrollbarWrapper');
+            const mainWrapper = document.getElementById('mainTableWrapper');
+            const dummy = document.getElementById('topScrollbarDummy');
+            const table = document.getElementById('mainTable');
+
+            function updateDummyWidth() { if (table && dummy) dummy.style.width = table.scrollWidth + 'px'; }
+            updateDummyWidth();
+            window.addEventListener('resize', updateDummyWidth);
+
+            let isSyncingTop = false; let isSyncingMain = false;
+            topWrapper.addEventListener('scroll', function() {
+                if (!isSyncingTop) { isSyncingMain = true; mainWrapper.scrollLeft = topWrapper.scrollLeft; }
+                isSyncingTop = false;
+            });
+            mainWrapper.addEventListener('scroll', function() {
+                if (!isSyncingMain) { isSyncingTop = true; topWrapper.scrollLeft = mainWrapper.scrollLeft; }
+                isSyncingMain = false;
+            });
+        }
+
+        function sortTableBy(columnKey) {
+            if (currentSortColumn === columnKey) {
+                currentSortDirection = (currentSortDirection === 'asc') ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = columnKey;
+                currentSortDirection = 'asc';
+            }
+            updateSortIcons();
+            renderTable();
+        }
+
+        function updateSortIcons() {
+            ALL_FIELDS.forEach(f => {
+                const icon = document.getElementById(`sort_icon_${f.key}`);
+                if (icon) {
+                    if (f.key === currentSortColumn) {
+                        icon.textContent = currentSortDirection === 'asc' ? '▲' : '▼';
+                        icon.className = 'text-[11px] text-blue-600 font-bold';
+                    } else {
+                        icon.textContent = '↕';
+                        icon.className = 'text-[10px] text-slate-400';
+                    }
+                }
+            });
+        }
+
+        function filterByCard(targetType) {
+            clearFiltersQuietly();
+            if (targetType === 'patio' || targetType === 'barracao') {
+                selectedFilterStatuses = statusList.filter(st => isStatusEnabled(st));
+            }
+            updateStatusFilterCheckboxes();
+            updateStatusFilterLabel();
+            
+            const search = document.getElementById('searchInput');
+            search.value = targetType === 'patio' ? 'PÁTIO' : 'BARRACÃO';
+            applyFilters();
+            showToast(`Filtrando registros localizados em: ${targetType === 'patio' ? 'PÁTIO' : 'BARRACÃO'}`, 'info');
+        }
+
+        function filterByStatusCard(statusName) {
+            clearFiltersQuietly();
+            selectedFilterStatuses = [statusName];
+            updateStatusFilterCheckboxes();
+            updateStatusFilterLabel();
+            applyFilters();
+            showToast(`Filtrando por status: ${statusName}`, 'info');
+        }
+
+        function clearFiltersQuietly() {
+            document.getElementById('searchInput').value = '';
+            selectedFilterStatuses = [];
+            document.querySelectorAll('.filter-status-cb').forEach(cb => cb.checked = false);
+        }
+
+        function updateStatusFilterCheckboxes() {
+            document.querySelectorAll('.filter-status-cb').forEach(cb => {
+                cb.checked = selectedFilterStatuses.includes(cb.value);
+            });
+        }
+
+        function openStatusRuleModal(msg) { document.getElementById('statusRuleMessage').innerHTML = msg; document.getElementById('statusRuleModal').classList.remove('hidden'); }
+        function closeStatusRuleModal() { document.getElementById('statusRuleModal').classList.add('hidden'); }
+        function closeDuplicateModal() { document.getElementById('duplicateModal').classList.add('hidden'); pendingSaveVehicleData = null; }
+
+        function confirmSaveDuplicate() {
+            if (!pendingSaveVehicleData) return;
+            const vehicleData = pendingSaveVehicleData;
+            closeDuplicateModal();
+
+            window.fbSet(window.fbRef(window.fbDB, 'veiculos/' + vehicleData.id), vehicleData)
+                .then(() => {
+                    showToast('Veículo duplicado salvo com sucesso!', 'success');
+                    closeVehicleModal();
+                });
+        }
+
+        function handleGlobalClick(e) {
+            const container = document.getElementById('statusDropdownContainer');
+            if (container && !container.contains(e.target)) {
+                document.getElementById('statusDropdownMenu').classList.add('hidden');
+            }
+        }
+
+        function toggleStatusDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('statusDropdownMenu').classList.toggle('hidden');
+        }
+
+        function clearAllVehicles() {
+            if (currentRole !== 'admin') { showToast('Ação restrita a Administradores.', 'error'); return; }
+            if (vehicles.length === 0) { showToast('A lista já está vazia.', 'info'); return; }
+            if (confirm('Tem certeza que deseja apagar TODOS os veículos cadastrados no Firebase?')) {
+                window.fbRemove(window.fbRef(window.fbDB, 'veiculos'))
+                    .then(() => showToast('Todos os registros foram removidos.', 'info'));
+            }
+        }
+
+        function renderStatusOptions() {
+            const filterCheckboxesContainer = document.getElementById('statusFilterCheckboxes');
+            filterCheckboxesContainer.innerHTML = '';
+            const formSelect = document.getElementById('field_status');
+            formSelect.innerHTML = '';
+
+            statusList.forEach(st => {
+                const isChecked = selectedFilterStatuses.includes(st);
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 text-xs font-medium text-slate-700 cursor-pointer';
+                div.innerHTML = `
+                    <input type="checkbox" id="filter_st_${escapeHtml(st)}" value="${escapeHtml(st)}" ${isChecked ? 'checked' : ''} onchange="onFilterStatusChange()" class="filter-status-cb rounded border-slate-300 text-slate-800 focus:ring-slate-700">
+                    <label for="filter_st_${escapeHtml(st)}" class="flex-1 cursor-pointer truncate">${escapeHtml(st)}</label>
+                `;
+                filterCheckboxesContainer.appendChild(div);
+
+                const optForm = document.createElement('option');
+                optForm.value = st;
+                optForm.textContent = st;
+                formSelect.appendChild(optForm);
+            });
+
+            updateStatusFilterLabel();
+
+            const listContainer = document.getElementById('statusListContainer');
+            listContainer.innerHTML = '';
+
+            statusList.forEach((st) => {
+                const count = vehicles.filter(v => normalizeText(v.status) === normalizeText(st)).length;
+                const isEnabled = isStatusEnabled(st);
+                const item = document.createElement('div');
+                item.className = 'px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm hover:bg-slate-50 transition gap-2';
+                const isAdmin = currentRole === 'admin';
+                item.innerHTML = `
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full ${getStatusBadgeColor(st).dot} flex-shrink-0"></span>
+                        <span class="font-medium text-slate-800 truncate" title="${escapeHtml(st)}">${escapeHtml(st)}</span>
+                        <span class="text-xs text-slate-400">(${count})</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select onchange="updateStatusTarget('${escapeHtml(st)}', this.value)" ${!isAdmin ? 'disabled' : ''} class="text-xs px-2 py-1 bg-slate-100 border border-slate-300 rounded font-medium outline-none ${!isAdmin ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}">
+                            <option value="enabled" ${isEnabled ? 'selected' : ''}>Somar nos Totais</option>
+                            <option value="none" ${!isEnabled ? 'selected' : ''}>Nenhum (Desativar Soma)</option>
+                        </select>
+                        ${isAdmin ? `
+                        <button onclick="removeStatusOption('${escapeHtml(st)}')" class="text-xs text-red-500 hover:text-red-700 p-1 font-medium transition ${count > 0 ? 'opacity-40 cursor-not-allowed' : ''}" ${count > 0 ? 'disabled title="Existem veículos usando este status"' : 'title="Excluir status"'}>
+                            <i class="fa-solid fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function isStatusEnabled(status) {
+            const stNorm = normalizeText(status);
+            for (let key in statusEnabledMap) {
+                if (normalizeText(key) === stNorm) return statusEnabledMap[key];
+            }
+            if (stNorm.includes('devolvido') || stNorm.includes('destruido') || stNorm.includes('destruicao')) return false;
+            return true;
+        }
+
+        function updateStatusTarget(st, val) {
+            statusEnabledMap[st] = (val === 'enabled');
+            saveStatusTargetsToStorage();
+        }
+
+        function onFilterStatusChange() {
+            selectedFilterStatuses = Array.from(document.querySelectorAll('.filter-status-cb:checked')).map(cb => cb.value);
+            updateStatusFilterLabel();
+            applyFilters();
+        }
+
+        function toggleAllFilterStatuses(checked) {
+            document.querySelectorAll('.filter-status-cb').forEach(cb => cb.checked = checked);
+            onFilterStatusChange();
+        }
+
+        function updateStatusFilterLabel() {
+            const label = document.getElementById('statusDropdownLabel');
+            if (selectedFilterStatuses.length === 0 || selectedFilterStatuses.length === statusList.length) {
+                label.textContent = '-- Todos os Status --';
+            } else if (selectedFilterStatuses.length === 1) {
+                label.textContent = selectedFilterStatuses[0];
+            } else {
+                label.textContent = `${selectedFilterStatuses.length} Status selecionados`;
+            }
+        }
+
+        function addCustomStatus(e) {
+            e.preventDefault();
+            if (currentRole !== 'admin') return;
+            const input = document.getElementById('newStatusInput');
+            const name = input.value.trim().toUpperCase();
+
+            if (!name) return;
+            if (statusList.some(s => normalizeText(s) === normalizeText(name))) {
+                showToast('Este status já existe na lista!', 'warning');
+                return;
+            }
+
+            statusList.push(name);
+            statusEnabledMap[name] = true; 
+            saveStatusesToStorage();
+            saveStatusTargetsToStorage();
+            input.value = '';
+        }
+
+        function removeStatusOption(st) {
+            if (currentRole !== 'admin') return;
+            const count = vehicles.filter(v => normalizeText(v.status) === normalizeText(st)).length;
+            if (count > 0) { showToast(`Não é possível remover "${st}". Existem ${count} veículos vinculados.`, 'error'); return; }
+
+            if (confirm(`Remover a opção de status "${st}"?`)) {
+                statusList = statusList.filter(s => s !== st);
+                delete statusEnabledMap[st];
+                selectedFilterStatuses = selectedFilterStatuses.filter(s => s !== st);
+                saveStatusesToStorage();
+                saveStatusTargetsToStorage();
+            }
+        }
+
+        function openStatusModal() { renderStatusOptions(); document.getElementById('statusModal').classList.remove('hidden'); }
+        function closeStatusModal() { document.getElementById('statusModal').classList.add('hidden'); }
+
+        function getFilteredVehicles() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const normalizedSelectedStatuses = selectedFilterStatuses.map(s => normalizeText(s));
+
+            let list = vehicles.filter(v => {
+                const matchesStatus = normalizedSelectedStatuses.length === 0 || 
+                                      normalizedSelectedStatuses.length === statusList.length || 
+                                      normalizedSelectedStatuses.includes(normalizeText(v.status));
+
+                if (!matchesStatus) return false;
+                if (!search) return true;
+
+                const searchHaystack = [
+                    v.placa, v.modelo, v.cor, v.tipo, v.localDisplay,
+                    v.delegacia, v.bouApreensao, v.bouRecuperacao,
+                    v.ppje, v.projudi, v.observacoes, v.varaComarca, v.status
+                ].join(' ').toLowerCase();
+
+                return searchHaystack.includes(search);
+            });
+
+            if (currentSortColumn) {
+                list.sort((a, b) => {
+                    let valA = a[currentSortColumn] ? String(a[currentSortColumn]).toLowerCase() : '';
+                    let valB = b[currentSortColumn] ? String(b[currentSortColumn]).toLowerCase() : '';
+                    if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            return list;
+        }
+
+        function applyFilters() { renderTable(); renderKpis(); }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            selectedFilterStatuses = [];
+            document.querySelectorAll('.filter-status-cb').forEach(cb => cb.checked = false);
+            updateStatusFilterLabel();
+            renderTable();
+            renderKpis();
+        }
+
+        function renderTable() {
+            const list = getFilteredVehicles();
+            const tbody = document.getElementById('vehicleTableBody');
+            const emptyState = document.getElementById('emptyState');
+            document.getElementById('recordCount').textContent = list.length;
+            tbody.innerHTML = '';
+
+            if (list.length === 0) { emptyState.classList.remove('hidden'); return; } 
+            else { emptyState.classList.add('hidden'); }
+
+            const isViewer = currentRole === 'viewer';
+
+            list.forEach(v => {
+                const tr = document.createElement('tr');
+                const badgeStyle = getStatusBadgeColor(v.status);
+
+                let photosHtml = '<span class="text-slate-300">-</span>';
+                if (v.images && v.images.length > 0) {
+                    photosHtml = `<div class="flex items-center -space-x-2 overflow-hidden">`;
+                    v.images.slice(0, 3).forEach(imgData => {
+                        photosHtml += `<img src="${imgData}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover cursor-pointer" onclick="openVehicleModal('${v.id}')">`;
+                    });
+                    if (v.images.length > 3) {
+                        photosHtml += `<span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-200 text-[10px] font-bold text-slate-600 ring-2 ring-white">+${v.images.length - 3}</span>`;
+                    }
+                    photosHtml += `</div>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="text-center sticky left-0 bg-white z-10 border-r border-slate-200">
+                        <div class="flex items-center justify-center gap-1">
+                            ${!isViewer ? `
+                            <button onclick="openVehicleModal('${v.id}')" class="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition" title="Editar">
+                                <i class="fa-solid fa-pen-to-square text-sm"></i>
+                            </button>` : ''}
+                            <button onclick="openHistoryModal('${v.id}')" class="text-amber-600 hover:text-amber-800 p-1 rounded hover:bg-amber-50 transition" title="Histórico">
+                                <i class="fa-solid fa-clock-rotate-left text-sm"></i>
+                            </button>
+                            ${currentRole === 'admin' ? `
+                            <button onclick="deleteVehicle('${v.id}')" class="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition" title="Excluir">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                    <td>${photosHtml}</td>
+                    <td>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}">
+                            <span class="w-1.5 h-1.5 rounded-full ${badgeStyle.dot}"></span>
+                            ${escapeHtml(v.status || 'SEM DESTINAÇÃO')}
+                        </span>
+                    </td>
+                    <td class="font-mono font-bold text-slate-900">${escapeHtml(v.placa || '-')}</td>
+                    <td class="font-medium text-slate-800">${escapeHtml(v.modelo || '-')}</td>
+                    <td>${escapeHtml(v.cor || '-')}</td>
+                    <td>${escapeHtml(v.tipo || '-')}</td>
+                    <td class="font-medium text-slate-700">${escapeHtml(v.localDisplay || '-')}</td>
+                    <td>${escapeHtml(v.delegacia || '-')}</td>
+                    <td>${formatDate(v.dataApreensao)}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.bouApreensao || '-')}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.bouRecuperacao || '-')}</td>
+                    <td>${escapeHtml(v.tipoProcedimento || '-')}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.ppje || '-')}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.projudi || '-')}</td>
+                    <td>${escapeHtml(v.varaComarca || '-')}</td>
+                    <td>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            (v.pericia || '').toLowerCase().startsWith('s') ? 'bg-emerald-100 text-emerald-800' :
+                            (v.pericia || '').toLowerCase().startsWith('p') ? 'bg-amber-100 text-amber-800' :
+                            'bg-slate-100 text-slate-600'
+                        }">
+                            ${escapeHtml(v.pericia || 'NÃO')}
+                        </span>
+                    </td>
+                    <td class="font-mono text-xs">${escapeHtml(v.laudo || '-')}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.cautelarPpje || '-')}</td>
+                    <td class="font-mono text-xs">${escapeHtml(v.cautelarProjudi || '-')}</td>
+                    <td class="max-w-xs truncate text-slate-500" title="${escapeHtml(v.observacoes || '')}">${escapeHtml(v.observacoes || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            setTimeout(() => {
+                const table = document.getElementById('mainTable');
+                const dummy = document.getElementById('topScrollbarDummy');
+                if (table && dummy) dummy.style.width = table.scrollWidth + 'px';
+            }, 50);
+        }
+
+        function getStatusBadgeColor(status) {
+            const st = normalizeText(status);
+            if (st.includes('sem destinacao')) return { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', dot: 'bg-amber-500' };
+            if (st.includes('adm devolvido')) return { bg: 'bg-stone-100', text: 'text-stone-800', border: 'border-stone-300', dot: 'bg-stone-600' };
+            if (st.includes('pedido adm')) return { bg: 'bg-orange-50', text: 'text-orange-800', border: 'border-orange-200', dot: 'bg-orange-500' };
+            if (st.includes('barracao')) return { bg: 'bg-teal-50', text: 'text-teal-800', border: 'border-teal-200', dot: 'bg-teal-500' };
+            if (st.includes('pedido')) return { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200', dot: 'bg-blue-500' };
+            if (st.includes('entrega')) return { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200', dot: 'bg-emerald-500' };
+            if (st.includes('leilao')) return { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200', dot: 'bg-purple-500' };
+            if (st.includes('destruido') || st.includes('destruicao')) return { bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-200', dot: 'bg-rose-500' };
+            if (st.includes('senad')) return { bg: 'bg-indigo-50', text: 'text-indigo-800', border: 'border-indigo-200', dot: 'bg-indigo-500' };
+            if (st.includes('outras')) return { bg: 'bg-cyan-50', text: 'text-cyan-800', border: 'border-cyan-200', dot: 'bg-cyan-500' };
+            if (st.includes('devolvido')) return { bg: 'bg-slate-200', text: 'text-slate-800', border: 'border-slate-300', dot: 'bg-slate-600' };
+            return { bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-300', dot: 'bg-slate-500' };
+        }
+
+        function renderKpis() {
+            const container = document.getElementById('kpiContainer');
+            const validVehiclesForTotal = vehicles.filter(v => {
+                const stNorm = normalizeText(v.status);
+                const isExcludedStatus = stNorm === normalizeText('DEVOLVIDO') || 
+                                         stNorm === normalizeText('DESTRUÍDO') || 
+                                         stNorm === normalizeText('ADM DEVOLVIDO');
+                return !isExcludedStatus && isStatusEnabled(v.status);
+            });
+
+            const totalInPatio = validVehiclesForTotal.filter(v => (v.localBase || 'PÁTIO') === 'PÁTIO').length;
+            const totalInBarracao = validVehiclesForTotal.filter(v => (v.localBase || '') === 'BARRACÃO').length;
+
+            let html = `
+                <div onclick="filterByCard('patio')" class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-slate-400 transition group min-w-[170px] flex-1" title="Clique para filtrar apenas o Pátio">
+                    <span class="text-[11px] font-bold tracking-wider text-slate-400 uppercase group-hover:text-slate-700">Total no Pátio</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span class="text-2xl font-bold text-slate-900">${totalInPatio}</span>
+                        <i class="fa-solid fa-car text-slate-300 group-hover:text-slate-500 transition"></i>
+                    </div>
+                </div>
+
+                <div onclick="filterByCard('barracao')" class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-teal-400 transition group min-w-[170px] flex-1" title="Clique para filtrar apenas o Barracão">
+                    <span class="text-[11px] font-bold tracking-wider text-teal-600 uppercase group-hover:text-teal-800">Total no Barracão</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span class="text-2xl font-bold text-teal-900">${totalInBarracao}</span>
+                        <i class="fa-solid fa-warehouse text-teal-300 group-hover:text-teal-600 transition"></i>
+                    </div>
+                </div>
+            `;
+
+            statusList.forEach(st => {
+                const count = vehicles.filter(v => normalizeText(v.status) === normalizeText(st)).length;
+                const badge = getStatusBadgeColor(st);
+                html += `
+                    <div onclick="filterByStatusCard('${escapeHtml(st)}')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-300 transition group min-w-[120px] max-w-[160px] flex-1" title="Clique para filtrar por ${st}">
+                        <span class="text-[10px] font-bold tracking-wider text-slate-500 truncate group-hover:text-blue-600" title="${st}">${st}</span>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span class="text-xl font-bold text-slate-900">${count}</span>
+                            <span class="w-2 h-2 rounded-full ${badge.dot}"></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function formatLocalDisplay(base, sub) {
+            const b = base || 'PÁTIO';
+            const s = sub ? sub.trim() : '';
+            return s ? `${b} (${s})` : b;
+        }
+
+        function parseLocalText(rawLocal) {
+            if (!rawLocal) return { base: 'PÁTIO', sub: '' };
+            const str = rawLocal.trim();
+            const norm = normalizeText(str);
+
+            if (norm.includes('barracao') || norm.includes('barracão')) {
+                const subMatch = str.match(/\((.*?)\)/);
+                const sub = subMatch ? subMatch[1] : str.replace(/barracao|barracão/gi, '').replace(/[\(\)]/g, '').trim();
+                return { base: 'BARRACÃO', sub: sub };
+            } else if (norm.includes('patio') || norm.includes('pátio')) {
+                const subMatch = str.match(/\((.*?)\)/);
+                const sub = subMatch ? subMatch[1] : str.replace(/patio|pátio/gi, '').replace(/[\(\)]/g, '').trim();
+                return { base: 'PÁTIO', sub: sub };
+            } else {
+                return { base: 'PÁTIO', sub: str };
+            }
+        }
+
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentVehicleImages.push(e.target.result);
+                    renderImagePreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function removeImage(index) {
+            currentVehicleImages.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = '';
+            currentVehicleImages.forEach((imgData, idx) => {
+                const div = document.createElement('div');
+                div.className = 'relative w-20 h-20 rounded-lg overflow-hidden border border-slate-300 group';
+                div.innerHTML = `
+                    <img src="${imgData}" class="w-full h-full object-cover">
+                    <button type="button" onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 opacity-80 group-hover:opacity-100 transition shadow">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function openVehicleModal(vehicleId = null) {
+            if (currentRole === 'viewer') return;
+            renderStatusOptions();
+            const form = document.getElementById('vehicleForm');
+            form.reset();
+            currentVehicleImages = [];
+
+            if (vehicleId) {
+                const v = vehicles.find(item => item.id === vehicleId);
+                if (v) {
+                    document.getElementById('modalVehicleTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Veículo';
+                    document.getElementById('vehicleId').value = v.id;
+                    document.getElementById('field_placa').value = v.placa || '';
+                    document.getElementById('field_modelo').value = v.modelo || '';
+                    document.getElementById('field_cor').value = v.cor || '';
+                    document.getElementById('field_tipo').value = v.tipo || '';
+                    document.getElementById('field_status').value = v.status || statusList[0];
+                    document.getElementById('field_localBase').value = v.localBase || 'PÁTIO';
+                    document.getElementById('field_localSub').value = v.localSub || '';
+                    document.getElementById('field_delegacia').value = v.delegacia || '';
+                    document.getElementById('field_dataApreensao').value = v.dataApreensao || '';
+                    document.getElementById('field_bouApreensao').value = v.bouApreensao || '';
+                    document.getElementById('field_bouRecuperacao').value = v.bouRecuperacao || '';
+                    document.getElementById('field_tipoProcedimento').value = v.tipoProcedimento || '';
+                    document.getElementById('field_ppje').value = v.ppje || '';
+                    document.getElementById('field_projudi').value = v.projudi || '';
+                    document.getElementById('field_varaComarca').value = v.varaComarca || '';
+                    document.getElementById('field_pericia').value = v.pericia || 'Não';
+                    document.getElementById('field_laudo').value = v.laudo || '';
+                    document.getElementById('field_cautelarPpje').value = v.cautelarPpje || '';
+                    document.getElementById('field_cautelarProjudi').value = v.cautelarProjudi || '';
+                    document.getElementById('field_observacoes').value = v.observacoes || '';
+                    currentVehicleImages = v.images ? [...v.images] : [];
+                }
+            } else {
+                document.getElementById('modalVehicleTitle').innerHTML = '<i class="fa-solid fa-car"></i> Cadastrar Novo Veículo';
+                document.getElementById('vehicleId').value = '';
+                document.getElementById('field_localBase').value = 'PÁTIO';
+            }
+
+            renderImagePreviews();
+            document.getElementById('vehicleModal').classList.remove('hidden');
+        }
+
+        function closeVehicleModal() { document.getElementById('vehicleModal').classList.add('hidden'); }
+
+        function openHistoryModal(vehicleId) {
+            const v = vehicles.find(item => item.id === vehicleId);
+            if (!v) return;
+
+            document.getElementById('historyPlate').textContent = v.placa || 'SEM PLACA';
+            const container = document.getElementById('historyTimeline');
+            container.innerHTML = '';
+            const history = v.history || [];
+
+            if (history.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Nenhum histórico registrado para este veículo.</p>`;
+            } else {
+                history.slice().reverse().forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'border-l-2 border-slate-200 pl-4 py-1.5 relative space-y-1';
+                    div.innerHTML = `
+                        <div class="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-slate-400"></div>
+                        <div class="flex items-center justify-between text-xs text-slate-500">
+                            <span class="font-medium text-slate-700">${escapeHtml(entry.action)}</span>
+                            <span>${entry.timestamp}</span>
+                        </div>
+                        <p class="text-xs text-slate-600 font-sans">${escapeHtml(entry.details)}</p>
+                        <div class="text-[10px] text-slate-400">Usuário: ${escapeHtml(entry.user || 'Desconhecido')}</div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() { document.getElementById('historyModal').classList.add('hidden'); }
+
+        function isIgnoredPlate(placaStr) {
+            if (!placaStr) return true;
+            const clean = normalizeText(placaStr).replace(/[^a-z0-9]/g, '');
+            return !clean || clean === 'semplaca' || clean.startsWith('semplaca');
+        }
+
+        function saveVehicle(e) {
+            e.preventDefault();
+            if (currentRole === 'viewer') return;
+
+            const id = document.getElementById('vehicleId').value;
+            const nowFormatted = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR');
+            const currentUserLabel = currentUser ? currentUser.name : 'Desconhecido';
+
+            const placaInput = document.getElementById('field_placa').value.toUpperCase().trim();
+            const newStatus = document.getElementById('field_status').value;
+            const projudiInput = document.getElementById('field_projudi').value.trim();
+
+            const localBase = document.getElementById('field_localBase').value;
+            const localSub = document.getElementById('field_localSub').value.trim();
+            const localDisplay = formatLocalDisplay(localBase, localSub);
+
+            const isEdit = !!id;
+            const existingVehicle = isEdit ? vehicles.find(v => v.id === id) : null;
+            const oldStatus = existingVehicle ? existingVehicle.status : '';
+
+            if (normalizeText(newStatus) === normalizeText('ADM DEVOLVIDO')) {
+                if (currentRole === 'operator') {
+                    if (!existingVehicle || normalizeText(oldStatus) !== normalizeText('PEDIDO ADM')) {
+                        openStatusRuleModal('Para o perfil <strong>Operador</strong>, a opção de STATUS <strong>"ADM DEVOLVIDO"</strong> só pode ser selecionada se o veículo já estiver anteriormente com o STATUS <strong>"PEDIDO ADM"</strong>.');
+                        return;
+                    }
+                }
+                if (!projudiInput) {
+                    openStatusRuleModal('Para selecionar o STATUS <strong>"ADM DEVOLVIDO"</strong>, é obrigatório o preenchimento do campo <strong>"Nº PROJUDI"</strong>.');
+                    return;
+                }
+            }
+
+            const vehicleData = {
+                id: id ? id : 'veh_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                placa: placaInput.toUpperCase(),
+                modelo: document.getElementById('field_modelo').value.trim().toUpperCase(),
+                cor: document.getElementById('field_cor').value.trim().toUpperCase(),
+                tipo: document.getElementById('field_tipo').value.trim().toUpperCase(),
+                status: newStatus.toUpperCase(),
+                localBase: localBase.toUpperCase(),
+                localSub: localSub.toUpperCase(),
+                localDisplay: localDisplay.toUpperCase(),
+                delegacia: document.getElementById('field_delegacia').value.trim().toUpperCase(),
+                dataApreensao: document.getElementById('field_dataApreensao').value,
+                bouApreensao: document.getElementById('field_bouApreensao').value.trim().toUpperCase(),
+                bouRecuperacao: document.getElementById('field_bouRecuperacao').value.trim().toUpperCase(),
+                tipoProcedimento: document.getElementById('field_tipoProcedimento').value.trim().toUpperCase(),
+                ppje: document.getElementById('field_ppje').value.trim().toUpperCase(),
+                projudi: projudiInput.toUpperCase(),
+                varaComarca: document.getElementById('field_varaComarca').value.trim().toUpperCase(),
+                pericia: document.getElementById('field_pericia').value.toUpperCase(),
+                laudo: document.getElementById('field_laudo').value.trim().toUpperCase(),
+                cautelarPpje: document.getElementById('field_cautelarPpje').value.trim().toUpperCase(),
+                cautelarProjudi: document.getElementById('field_cautelarProjudi').value.trim().toUpperCase(),
+                observacoes: document.getElementById('field_observacoes').value.trim(),
+                images: [...currentVehicleImages],
+                history: existingVehicle ? [...(existingVehicle.history || [])] : []
+            };
+
+            let logDetails = 'Dados atualizados.';
+            if (oldStatus && oldStatus !== newStatus) { logDetails = `Status alterado de "${oldStatus}" para "${newStatus}".`; } 
+            else if (!isEdit) { logDetails = `Cadastrado com o status "${newStatus}".`; }
+
+            vehicleData.history.push({
+                timestamp: nowFormatted,
+                action: isEdit ? 'Atualização' : 'Cadastro Inicial',
+                details: logDetails,
+                user: currentUserLabel
+            });
+
+            const shouldCheckDuplicate = !isIgnoredPlate(placaInput);
+            const duplicate = shouldCheckDuplicate ? vehicles.find(v => normalizeText(v.placa) === normalizeText(placaInput) && v.id !== id) : null;
+            
+            if (duplicate) {
+                pendingSaveVehicleData = vehicleData;
+                document.getElementById('dupPlateText').textContent = placaInput || 'SEM PLACA';
+                document.getElementById('dupVehicleInfo').innerHTML = `
+                    <p><strong>Modelo:</strong> ${escapeHtml(duplicate.modelo || '-')}</p>
+                    <p><strong>Status Atual:</strong> ${escapeHtml(duplicate.status || '-')}</p>
+                    <p><strong>Local:</strong> ${escapeHtml(duplicate.localDisplay || '-')}</p>
+                `;
+                document.getElementById('duplicateModal').classList.remove('hidden');
+                return;
+            }
+
+            window.fbSet(window.fbRef(window.fbDB, 'veiculos/' + vehicleData.id), vehicleData)
+                .then(() => {
+                    showToast('Veículo salvo com sucesso no Firebase!', 'success');
+                    closeVehicleModal();
+                });
+        }
+
+        function deleteVehicle(id) {
+            if (currentRole !== 'admin') { showToast('Apenas administradores podem excluir veículos.', 'error'); return; }
+            const v = vehicles.find(item => item.id === id);
+            if (!v) return;
+
+            if (confirm(`Tem certeza que deseja excluir o veículo placa ${v.placa || 'Sem Placa'} (${v.modelo})?`)) {
+                window.fbRemove(window.fbRef(window.fbDB, 'veiculos/' + id))
+                    .then(() => showToast('Veículo excluído do Firebase.', 'info'));
+            }
+        }
+
+        function openImportModal() { if (currentRole === 'viewer') return; document.getElementById('importModal').classList.remove('hidden'); }
+        function closeImportModal() { document.getElementById('importModal').classList.add('hidden'); }
+
+        function switchImportTab(tab) {
+            const tabLink = document.getElementById('tabBtnLink');
+            const tabPaste = document.getElementById('tabBtnPaste');
+            const contentLink = document.getElementById('importTabLink');
+            const contentPaste = document.getElementById('importTabPaste');
+
+            if (tab === 'link') {
+                tabLink.className = 'pb-2 border-b-2 border-emerald-600 text-emerald-700 font-semibold';
+                tabPaste.className = 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700';
+                contentLink.classList.remove('hidden');
+                contentPaste.classList.add('hidden');
+            } else {
+                tabPaste.className = 'pb-2 border-b-2 border-emerald-600 text-emerald-700 font-semibold';
+                tabLink.className = 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700';
+                contentPaste.classList.remove('hidden');
+                contentLink.classList.add('hidden');
+            }
+        }
+
+        async function importFromUrl() {
+            const url = document.getElementById('sheetsUrlInput').value.trim();
+            if (!url) { showToast('Por favor, insira o link CSV publicado da planilha!', 'warning'); return; }
+
+            try {
+                showToast('Baixando e processando planilha...', 'info');
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Não foi possível acessar a URL informada.');
+                const csvText = await response.text();
+                processCsvData(csvText);
+                closeImportModal();
+            } catch (err) {
+                showToast('Erro ao importar da URL. Verifique se o link está publicado em formato CSV.', 'error');
+            }
+        }
+
+        function handleFileUpload(e) {
+            const files = Array.from(e.target.files);
+            if (!files || files.length === 0) return;
+            let filesProcessed = 0; let combinedText = '';
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    combinedText += evt.target.result + '\n';
+                    filesProcessed++;
+                    if (filesProcessed === files.length) {
+                        processCsvData(combinedText);
+                        closeImportModal();
+                        e.target.value = '';
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        function importFromText() {
+            const text = document.getElementById('csvPasteInput').value.trim();
+            if (!text) { showToast('Cole o conteúdo CSV antes de continuar.', 'warning'); return; }
+            processCsvData(text);
+            closeImportModal();
+            document.getElementById('csvPasteInput').value = '';
+        }
+
+        function parseCSVToGrid(csvText, delimiter) {
+            const rows = []; let currentRow = []; let currentCell = ''; let inQuotes = false;
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i]; const nextChar = csvText[i + 1];
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') { currentCell += '"'; i++; } 
+                    else { inQuotes = !inQuotes; }
+                } else if (char === delimiter && !inQuotes) {
+                    currentRow.push(currentCell.trim()); currentCell = '';
+                } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++;
+                    currentRow.push(currentCell.trim());
+                    if (currentRow.some(cell => cell.length > 0)) rows.push(currentRow);
+                    currentRow = []; currentCell = '';
+                } else {
+                    currentCell += char;
+                }
+            }
+            if (currentCell.length > 0 || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                if (currentRow.some(cell => cell.length > 0)) rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        function processCsvData(text) {
+            if (!text || !text.trim()) { showToast('Nenhum dado encontrado para importar.', 'warning'); return; }
+            text = text.replace(/^\uFEFF/, '');
+
+            let delimiter = ',';
+            const first1000 = text.substring(0, 1000);
+            const semicolonCount = (first1000.match(/;/g) || []).length;
+            const commaCount = (first1000.match(/,/g) || []).length;
+            const tabCount = (first1000.match(/\t/g) || []).length;
+
+            if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';';
+            else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t';
+
+            const rawGrid = parseCSVToGrid(text, delimiter);
+            if (rawGrid.length === 0) return;
+
+            let headerRowIndex = -1; let normalizedHeaders = [];
+            for (let i = 0; i < Math.min(rawGrid.length, 15); i++) {
+                const row = rawGrid[i];
+                const rowNormalized = row.map(cell => normalizeHeader(cell));
+                const hasPlaca = rowNormalized.some(h => h.includes('PLACA'));
+                const hasModelo = rowNormalized.some(h => h.includes('MODELO') || h.includes('VEICULO'));
+                const hasStatus = rowNormalized.some(h => h.includes('STATUS') || h.includes('SITUACAO') || h.includes('SITUAÇÃO'));
+                const hasLocal = rowNormalized.some(h => h.includes('LOCAL') || h.includes('PATIO'));
+
+                if ((hasPlaca || hasModelo) || (hasStatus || hasLocal)) {
+                    headerRowIndex = i; normalizedHeaders = rowNormalized; break;
+                }
+            }
+
+            if (headerRowIndex === -1) { showToast('Não foi possível identificar o cabeçalho no arquivo.', 'error'); return; }
+
+            let importedCount = 0;
+            const nowFormatted = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR');
+            const currentUserLabel = currentUser ? currentUser.name : 'Desconhecido';
+            const updates = {};
+
+            for (let i = headerRowIndex + 1; i < rawGrid.length; i++) {
+                const rowValues = rawGrid[i];
+                if (!rowValues || rowValues.length === 0) continue;
+
+                const vehicleId = 'veh_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 4);
+                const item = { id: vehicleId, images: [], history: [] };
+                let rawLocalImported = '';
+
+                normalizedHeaders.forEach((h, colIdx) => {
+                    let val = rowValues[colIdx] ? rowValues[colIdx].trim() : '';
+                    if (!val) return;
+                    val = val.replace(/[\r\n]+/g, ' ');
+                    const valUpper = val.toUpperCase();
+
+                    if (h.includes('LOCAL') && !h.includes('SITUACAO')) rawLocalImported = valUpper;
+                    else if (h.includes('DELEGACIA')) item.delegacia = valUpper;
+                    else if (h.includes('TIPO') && !h.includes('PROCEDIMENTO')) item.tipo = valUpper;
+                    else if (h.includes('PLACA')) item.placa = valUpper.replace(/\s+/g, '');
+                    else if (h.includes('STATUS') || h.includes('SITUACAO')) item.status = valUpper;
+                    else if (h.includes('MODELO') || h.includes('VEICULO')) item.modelo = valUpper;
+                    else if (h.includes('COR')) item.cor = valUpper;
+                    else if (h.includes('DATA') && (h.includes('APREENSÃO') || h.includes('APREENSAO') || h.includes('RECOLHIMENTO'))) item.dataApreensao = parseFlexibleDate(valUpper);
+                    else if (h.includes('BOU') && (h.includes('APREENSÃO') || h.includes('APREENSAO') || h.includes('RECOLHIMENTO'))) item.bouApreensao = valUpper;
+                    else if (h.includes('BOU') && (h.includes('RECUPERAÇÃO') || h.includes('RECUPERACAO'))) item.bouRecuperacao = valUpper;
+                    else if (h.includes('PROCEDIMENTO')) item.tipoProcedimento = valUpper;
+                    else if (h.includes('PPJE') && !h.includes('CAUTELAR')) item.ppje = valUpper;
+                    else if (h.includes('PROJUDI') && !h.includes('CAUTELAR')) item.projudi = valUpper;
+                    else if (h.includes('VARA') || h.includes('COMARCA')) item.varaComarca = valUpper;
+                    else if (h.includes('PERÍCIA') || h.includes('PERICIA')) {
+                        item.pericia = (val.toLowerCase().startsWith('s') || val === '1' || val.toLowerCase() === 'sim') ? 'SIM' :
+                                       (val.toLowerCase().startsWith('p') ? 'PENDENTE' : 'NÃO');
+                    }
+                    else if (h.includes('LAUDO')) item.laudo = valUpper;
+                    else if (h.includes('CAUTELAR') && (h.includes('PPJ') || h.includes('PPJE'))) item.cautelarPpje = valUpper;
+                    else if (h.includes('CAUTELAR') && h.includes('PROJUDI')) item.cautelarProjudi = valUpper;
+                    else if (h.includes('OBS') || h.includes('OBSERVAÇÕES') || h.includes('OBSERVACOES')) item.observacoes = valUpper;
+                });
+
+                const parsedLocal = parseLocalText(rawLocalImported);
+                item.localBase = parsedLocal.base;
+                item.localSub = parsedLocal.sub;
+                item.localDisplay = formatLocalDisplay(item.localBase, item.localSub);
+                item.status = item.status || 'SEM DESTINAÇÃO';
+
+                if (!statusList.some(s => normalizeText(s) === normalizeText(item.status))) {
+                    statusList.push(item.status);
+                    statusEnabledMap[item.status] = true;
+                }
+
+                item.history.push({
+                    timestamp: nowFormatted,
+                    action: 'Importação',
+                    details: `Registro importado via planilha/CSV com status "${item.status}".`,
+                    user: currentUserLabel
+                });
+
+                if (item.placa || item.modelo || item.bouApreensao || item.localDisplay) {
+                    updates[vehicleId] = item;
+                    importedCount++;
+                }
+            }
+
+            saveStatusesToStorage();
+            saveStatusTargetsToStorage();
+
+            window.fbUpdate(window.fbRef(window.fbDB, 'veiculos'), updates)
+                .then(() => showToast(`${importedCount} veículo(s) importado(s) para o Firebase!`, 'success'))
+                .catch((err) => showToast('Erro ao salvar no banco: ' + err.message, 'error'));
+        }
+
+        function openExportModal() {
+            if (currentRole === 'viewer') return;
+            if (vehicles.length === 0) { showToast('Não há veículos para exportar.', 'warning'); return; }
+            const container = document.getElementById('exportStatusList');
+            container.innerHTML = '';
+
+            statusList.forEach(st => {
+                const isDevolvido = normalizeText(st).includes('devolvido') || normalizeText(st).includes('destruido');
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 text-xs font-medium text-slate-700 hover:bg-slate-50 p-1.5 rounded transition';
+                div.innerHTML = `
+                    <input type="checkbox" id="exp_st_${escapeHtml(st)}" value="${escapeHtml(st)}" ${isDevolvido ? '' : 'checked'} class="export-status-cb rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    <label for="exp_st_${escapeHtml(st)}" class="flex-1 cursor-pointer">${escapeHtml(st)} ${isDevolvido ? '<span class="text-[10px] text-amber-600 font-normal">(Desmarcado por padrão)</span>' : ''}</label>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+
+        function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+        function toggleExportAllStatuses(checked) { document.querySelectorAll('.export-status-cb').forEach(cb => cb.checked = checked); }
+
+        function executeExportCSV() {
+            const selectedCheckboxes = Array.from(document.querySelectorAll('.export-status-cb:checked')).map(cb => normalizeText(cb.value));
+            if (selectedCheckboxes.length === 0) { showToast('Selecione ao menos um STATUS para exportar!', 'warning'); return; }
+
+            const dataToExport = vehicles.filter(v => selectedCheckboxes.includes(normalizeText(v.status)));
+            if (dataToExport.length === 0) { showToast('Nenhum veículo encontrado com os STATUS selecionados.', 'warning'); return; }
+
+            const headers = [
+                'LOCAL', 'DELEGACIA VINCULADA', 'TIPO', 'PLACA APLICADA', 'STATUS', 'MODELO',
+                'COR', 'DATA DA APREENSÃO', 'BOU APREENSÃO', 'BOU RECUPERAÇÃO', 'TIPO DE PROCEDIMENTO',
+                'Nº PPJE', 'Nº PROJUDI', 'VARA/COMARCA', 'FOI REALIZADA PERÍCIA?', 'Nº DO LAUDO PERICIAL',
+                'CAUTELAR PPJ-E', 'CAUTELAR PROJUDI', 'OBSERVAÇÕES'
+            ];
+
+            let csvContent = '\uFEFF' + headers.join(';') + '\n';
+            dataToExport.forEach(v => {
+                const row = [
+                    v.localDisplay || formatLocalDisplay(v.localBase, v.localSub),
+                    v.delegacia || '', v.tipo || '', v.placa || '', v.status || '', v.modelo || '',
+                    v.cor || '', formatDate(v.dataApreensao), v.bouApreensao || '', v.bouRecuperacao || '',
+                    v.tipoProcedimento || '', v.ppje || '', v.projudi || '', v.varaComarca || '',
+                    v.pericia || 'NÃO', v.laudo || '', v.cautelarPpje || '', v.cautelarProjudi || '',
+                    v.observacoes || ''
+                ].map(field => `"${String(field).replace(/"/g, '""')}"`);
+                csvContent += row.join(';') + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `relatorio_patio_veiculos_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            closeExportModal();
+            showToast(`${dataToExport.length} veículo(s) exportado(s) em CSV!`, 'success');
+        }
+
+        function openPrintModal() {
+            document.getElementById('printScopeCount').textContent = getFilteredVehicles().length;
+            const container = document.getElementById('printColumnsContainer');
+            container.innerHTML = '';
+
+            ALL_FIELDS.forEach(col => {
+                const isDefault = DEFAULT_PRINT_KEYS.includes(col.key);
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2';
+                div.innerHTML = `
+                    <input type="checkbox" id="prt_col_${col.key}" value="${col.key}" ${isDefault ? 'checked' : ''} class="print-col-cb rounded border-slate-300 text-blue-600">
+                    <label for="prt_col_${col.key}" class="cursor-pointer text-slate-700">${col.label}</label>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('printModal').classList.remove('hidden');
+        }
+
+        function closePrintModal() { document.getElementById('printModal').classList.add('hidden'); }
+        function togglePrintColumns(checked) { document.querySelectorAll('.print-col-cb').forEach(cb => cb.checked = checked); }
+
+        function triggerPrintProcess() {
+            const selectedColsKeys = Array.from(document.querySelectorAll('.print-col-cb:checked')).map(cb => cb.value);
+            if (selectedColsKeys.length === 0) { showToast('Selecione pelo menos uma coluna para imprimir!', 'warning'); return; }
+
+            const scope = document.querySelector('input[name="printScope"]:checked').value;
+            const printList = (scope === 'filtered') ? getFilteredVehicles() : vehicles;
+            if (printList.length === 0) return;
+
+            const printHead = document.getElementById('printTableHead');
+            const printBody = document.getElementById('printTableBody');
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR');
+
+            let headHtml = '<tr>';
+            ALL_FIELDS.filter(f => selectedColsKeys.includes(f.key)).forEach(f => { headHtml += `<th>${f.label}</th>`; });
+            headHtml += '</tr>';
+            printHead.innerHTML = headHtml;
+
+            let bodyHtml = '';
+            printList.forEach(v => {
+                bodyHtml += '<tr>';
+                ALL_FIELDS.filter(f => selectedColsKeys.includes(f.key)).forEach(f => {
+                    let val = v[f.key] || '-';
+                    if (f.key === 'dataApreensao') val = formatDate(val);
+                    bodyHtml += `<td>${escapeHtml(val)}</td>`;
+                });
+                bodyHtml += '</tr>';
+            });
+            printBody.innerHTML = bodyHtml;
+            closePrintModal();
+
+            setTimeout(() => { window.print(); }, 300);
+        }
+
+        function normalizeText(text) {
+            if (!text) return '';
+            return String(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        }
+
+        function normalizeHeader(h) {
+            if (!h) return '';
+            return h.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        }
+
+        function parseFlexibleDate(str) {
+            if (!str) return '';
+            str = str.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+            const parts = str.split(/[\/\.-]/);
+            if (parts.length === 3) {
+                let day = parts[0].padStart(2, '0'); let month = parts[1].padStart(2, '0'); let year = parts[2];
+                if (year.length === 2) year = '20' + year;
+                if (parseInt(month, 10) > 12 && parseInt(day, 10) <= 12) { const temp = day; day = month; month = temp; }
+                if (year.length === 4 && parseInt(month, 10) <= 12 && parseInt(day, 10) <= 31) return `${year}-${month}-${day}`;
+            }
+            return str;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateStr;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let colors = 'bg-slate-900 text-white border-slate-700';
+            let icon = 'fa-circle-info';
+
+            if (type === 'success') { colors = 'bg-emerald-900 text-emerald-100 border-emerald-700'; icon = 'fa-circle-check text-emerald-400'; }
+            else if (type === 'error') { colors = 'bg-rose-900 text-rose-100 border-rose-700'; icon = 'fa-circle-exclamation text-rose-400'; }
+            else if (type === 'warning') { colors = 'bg-amber-900 text-amber-100 border-amber-700'; icon = 'fa-triangle-exclamation text-amber-400'; }
+
+            toast.className = `p-3.5 rounded-lg shadow-lg border text-xs font-medium flex items-center gap-2.5 transition transform duration-300 pointer-events-auto max-w-sm ${colors}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span class="flex-1">${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
