@@ -51,7 +51,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // CONFIGURAÇÃO DO SEU FIREBASE PROJECT
         const firebaseConfig = {
             apiKey: "AIzaSyDRhJRpjiZEr7aRpyUx3LQz777WdoAvr_g",
             authDomain: "controle-8.firebaseapp.com",
@@ -65,7 +64,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Expondo para o escopo global da janela
         window.fbDB = db;
         window.fbRef = ref;
         window.fbSet = set;
@@ -823,7 +821,6 @@
 
         // --- INTEGRAÇÃO REALTIME DATABASE ---
         function initFirebaseListeners() {
-            // Monitorar Veículos
             window.fbOnValue(window.fbRef(window.fbDB, 'veiculos'), (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
@@ -839,7 +836,6 @@
                 renderKpis();
             });
 
-            // Monitorar Status
             window.fbOnValue(window.fbRef(window.fbDB, 'statusList'), (snapshot) => {
                 const data = snapshot.val();
                 statusList = data ? Object.values(data) : [...DEFAULT_STATUSES];
@@ -847,14 +843,12 @@
                 renderKpis();
             });
 
-            // Monitorar Soma de Status
             window.fbOnValue(window.fbRef(window.fbDB, 'statusEnabledMap'), (snapshot) => {
                 const data = snapshot.val();
                 statusEnabledMap = data ? data : { ...DEFAULT_STATUS_ENABLED };
                 renderKpis();
             });
 
-            // Monitorar Usuários
             window.fbOnValue(window.fbRef(window.fbDB, 'usuarios'), (snapshot) => {
                 const data = snapshot.val();
                 users = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [...DEFAULT_USERS];
@@ -862,9 +856,7 @@
             });
         }
 
-        function saveVehiclesToStorage() {
-            // Mantida vazia. A persistência é enviada diretamente ao nó `veiculos/ID`
-        }
+        function saveVehiclesToStorage() {}
 
         function saveStatusesToStorage() {
             window.fbSet(window.fbRef(window.fbDB, 'statusList'), statusList);
@@ -992,7 +984,6 @@
             }
         }
 
-        // --- Gerenciamento de Usuários ---
         function openUsersModal() { if (currentRole !== 'admin') return; renderUsersTable(); resetUserForm(); document.getElementById('usersModal').classList.remove('hidden'); }
         function closeUsersModal() { document.getElementById('usersModal').classList.add('hidden'); }
         function resetUserForm() { document.getElementById('userForm').reset(); document.getElementById('userEditId').value = ''; document.getElementById('userFormTitle').textContent = 'Cadastrar Novo Usuário'; document.getElementById('field_userPass').required = true; }
@@ -1126,6 +1117,7 @@
             });
         }
 
+        // CORRIGIDO: Permite busca livre mantendo o filtro de local
         function filterByCard(targetType) {
             if (targetType === 'patio') {
                 currentLocalFilter = 'PÁTIO';
@@ -1325,6 +1317,7 @@
         function openStatusModal() { renderStatusOptions(); document.getElementById('statusModal').classList.remove('hidden'); }
         function closeStatusModal() { document.getElementById('statusModal').classList.add('hidden'); }
 
+        // CORRIGIDO: Valida o localBase E aceita texto de busca do input simultaneamente
         function getFilteredVehicles() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const normalizedSelectedStatuses = selectedFilterStatuses.map(s => normalizeText(s));
@@ -1558,7 +1551,6 @@
             }
         }
 
-        // OPÇÃO 1: Redimensionamento e compressão via Canvas (Imagens extremamente leves em Base64 no Realtime Database)
         function handleImageUpload(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
