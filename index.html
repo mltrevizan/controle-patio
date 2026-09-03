@@ -1117,19 +1117,20 @@
             });
         }
 
-        // CORRIGIDO: Permite busca livre mantendo o filtro de local
+        // CORRIGIDO: Permite busca livre mantendo o filtro de local sem preencher o input
         function filterByCard(targetType) {
             if (targetType === 'patio') {
-                currentLocalFilter = 'PÁTIO';
+                currentLocalFilter = (currentLocalFilter === 'PÁTIO') ? 'ALL' : 'PÁTIO';
             } else if (targetType === 'barracao') {
-                currentLocalFilter = 'BARRACÃO';
+                currentLocalFilter = (currentLocalFilter === 'BARRACÃO') ? 'ALL' : 'BARRACÃO';
             }
-            selectedFilterStatuses = statusList.filter(st => isStatusEnabled(st));
-            updateStatusFilterCheckboxes();
-            updateStatusFilterLabel();
             
             applyFilters();
-            showToast(`Filtrando registros localizados em: ${currentLocalFilter}`, 'info');
+            if (currentLocalFilter !== 'ALL') {
+                showToast(`Filtrando registros localizados em: ${currentLocalFilter}`, 'info');
+            } else {
+                showToast('Exibindo veículos de todos os locais', 'info');
+            }
         }
 
         function filterByStatusCard(statusName) {
@@ -1139,13 +1140,6 @@
             updateStatusFilterLabel();
             applyFilters();
             showToast(`Filtrando por status: ${statusName}`, 'info');
-        }
-
-        function clearFiltersQuietly() {
-            document.getElementById('searchInput').value = '';
-            selectedFilterStatuses = [];
-            currentLocalFilter = 'ALL';
-            document.querySelectorAll('.filter-status-cb').forEach(cb => cb.checked = false);
         }
 
         function updateStatusFilterCheckboxes() {
