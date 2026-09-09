@@ -220,7 +220,7 @@
                     <i class="fa-solid fa-file-csv text-slate-600"></i>
                     <span>Exportar CSV</span>
                 </button>
-                <button id="btnClearAll" onclick="clearAllVehicles()" class="px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition flex items-center gap-1.5">
+                <button id="btnClearAll" onclick="openClearAllModal()" class="px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition flex items-center gap-1.5">
                     <i class="fa-solid fa-trash-can"></i>
                     <span class="hidden sm:inline">Limpar Tudo</span>
                 </button>
@@ -381,6 +381,40 @@
                 <button onclick="confirmSaveDuplicate()" class="px-4 py-2 text-xs font-medium text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition shadow-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-check"></i>
                     <span>Ignorar & Salvar Repetido</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmação de Limpar Tudo com Backup Automático -->
+    <div id="clearAllModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-rose-300 w-full max-w-md overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-rose-700 text-white flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-200"></i>
+                    <span>Atenção - Exclusão de Todos os Dados</span>
+                </h3>
+                <button onclick="closeClearAllModal()" class="text-rose-100 hover:text-white transition p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-3">
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-semibold">
+                    Tem certeza de que deseja apagar TODOS os <span id="clearAllCount" class="text-rose-700 font-bold">0</span> veículos cadastrados no sistema?
+                </p>
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2">
+                    <i class="fa-solid fa-circle-info text-amber-600 text-sm mt-0.5"></i>
+                    <div>
+                        <strong>Backup automático:</strong> Antes de efetuar a exclusão definitiva no banco de dados, o sistema irá baixar automaticamente um arquivo CSV contendo todos os registros.
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 italic">Esta ação é irreversível.</p>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeClearAllModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Cancelar</button>
+                <button onclick="confirmClearAllVehicles()" class="px-4 py-2 text-xs font-medium text-white bg-rose-700 hover:bg-rose-600 rounded-lg transition shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Exportar Backup & Limpar Tudo</span>
                 </button>
             </div>
         </div>
@@ -803,7 +837,7 @@
         let pendingSaveVehicleData = null;
         let currentSortColumn = null;
         let currentSortDirection = 'asc';
-        let currentLocalFilter = 'ALL'; // 'ALL', 'PÁTIO', ou 'BARRACÃO'
+        let currentLocalFilter = 'ALL';
 
         window.onload = function() {
             loadLogos();
@@ -1117,7 +1151,6 @@
             });
         }
 
-        // CORRIGIDO: Permite busca livre mantendo o filtro de local sem preencher o input
         function filterByCard(targetType) {
             if (targetType === 'patio') {
                 currentLocalFilter = (currentLocalFilter === 'PÁTIO') ? 'ALL' : 'PÁTIO';
@@ -1176,13 +1209,65 @@
             document.getElementById('statusDropdownMenu').classList.toggle('hidden');
         }
 
-        function clearAllVehicles() {
+        function openClearAllModal() {
             if (currentRole !== 'admin') { showToast('Ação restrita a Administradores.', 'error'); return; }
             if (vehicles.length === 0) { showToast('A lista já está vazia.', 'info'); return; }
-            if (confirm('Tem certeza que deseja apagar TODOS os veículos cadastrados no Firebase?')) {
-                window.fbRemove(window.fbRef(window.fbDB, 'veiculos'))
-                    .then(() => showToast('Todos os registros foram removidos.', 'info'));
-            }
+            document.getElementById('clearAllCount').textContent = vehicles.length;
+            document.getElementById('clearAllModal').classList.remove('hidden');
+        }
+
+        function closeClearAllModal() {
+            document.getElementById('clearAllModal').classList.add('hidden');
+        }
+
+        function confirmClearAllVehicles() {
+            if (currentRole !== 'admin') { showToast('Ação restrita a Administradores.', 'error'); return; }
+            if (vehicles.length === 0) { showToast('A lista já está vazia.', 'info'); closeClearAllModal(); return; }
+
+            // 1. Exporta backup de todos os veículos cadastrados em CSV
+            exportAllDataToCSV();
+
+            // 2. Remove todos os registros no banco Firebase
+            window.fbRemove(window.fbRef(window.fbDB, 'veiculos'))
+                .then(() => {
+                    closeClearAllModal();
+                    showToast('Backup baixado em CSV e todos os registros foram removidos com sucesso.', 'success');
+                })
+                .catch((err) => {
+                    closeClearAllModal();
+                    showToast('Erro ao remover registros: ' + err.message, 'error');
+                });
+        }
+
+        function exportAllDataToCSV() {
+            const headers = [
+                'LOCAL', 'DELEGACIA VINCULADA', 'TIPO', 'PLACA APLICADA', 'STATUS', 'MODELO',
+                'COR', 'DATA DA APREENSÃO', 'BOU APREENSÃO', 'BOU RECUPERAÇÃO', 'TIPO DE PROCEDIMENTO',
+                'Nº PPJE', 'Nº PROJUDI', 'VARA/COMARCA', 'FOI REALIZADA PERÍCIA?', 'Nº DO LAUDO PERICIAL',
+                'CAUTELAR PPJ-E', 'CAUTELAR PROJUDI', 'OBSERVAÇÕES'
+            ];
+
+            let csvContent = '\uFEFF' + headers.join(';') + '\n';
+            vehicles.forEach(v => {
+                const row = [
+                    v.localDisplay || formatLocalDisplay(v.localBase, v.localSub),
+                    v.delegacia || '', v.tipo || '', v.placa || '', v.status || '', v.modelo || '',
+                    v.cor || '', formatDate(v.dataApreensao), v.bouApreensao || '', v.bouRecuperacao || '',
+                    v.tipoProcedimento || '', v.ppje || '', v.projudi || '', v.varaComarca || '',
+                    v.pericia || 'NÃO', v.laudo || '', v.cautelarPpje || '', v.cautelarProjudi || '',
+                    v.observacoes || ''
+                ].map(field => `"${String(field).replace(/"/g, '""')}"`);
+                csvContent += row.join(';') + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `backup_limpeza_patio_veiculos_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function renderStatusOptions() {
@@ -1311,7 +1396,6 @@
         function openStatusModal() { renderStatusOptions(); document.getElementById('statusModal').classList.remove('hidden'); }
         function closeStatusModal() { document.getElementById('statusModal').classList.add('hidden'); }
 
-        // CORRIGIDO: Valida o localBase E aceita texto de busca do input simultaneamente
         function getFilteredVehicles() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const normalizedSelectedStatuses = selectedFilterStatuses.map(s => normalizeText(s));
