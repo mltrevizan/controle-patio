@@ -1240,10 +1240,8 @@
             if (currentRole !== 'admin') { showToast('Ação restrita a Administradores.', 'error'); return; }
             if (vehicles.length === 0) { showToast('A lista já está vazia.', 'info'); closeClearAllModal(); return; }
 
-            // 1. Exporta backup de todos os veículos cadastrados em CSV
             exportAllDataToCSV();
 
-            // 2. Remove todos os registros no banco Firebase
             window.fbRemove(window.fbRef(window.fbDB, 'veiculos'))
                 .then(() => {
                     closeClearAllModal();
@@ -2233,7 +2231,7 @@
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const parts = dateStr.split('-');
-            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts0]}`;
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
             return dateStr;
         }
 
